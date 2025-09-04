@@ -1,16 +1,17 @@
 <template>
-  <div class="mt-4">
+  <div>
     <Loader v-if="loading" />
     <Notification v-if="error" :message="error" type="is-danger" />
-    <NoCommentsYet v-if="!comments.length && !loading" />
+
+    <p v-if="!comments.length && !loading">No comments yet</p>
 
     <div v-for="comment in comments" :key="comment.id" class="box">
       <p><strong>{{ comment.name }}</strong> ({{ comment.email }})</p>
       <p>{{ comment.body }}</p>
-      <button class="button is-small is-danger" @click="deleteComment(comment.id)">Delete</button>
+      <button class="button is-small is-danger" @click="deleteComment(comment)">Delete</button>
     </div>
 
-    <CommentForm @added="addComment" :postId="postId" />
+    <CommentForm :postId="postId" @added="addComment" />
   </div>
 </template>
 
@@ -18,19 +19,23 @@
 import Loader from './Loader.vue';
 import Notification from './Notification.vue';
 import CommentForm from './CommentForm.vue';
-import NoCommentsYet from './NoCommentsYet.vue';
 
 export default {
+  components: { Loader, Notification, CommentForm },
   props: { postId: Number },
-  components: { Loader, Notification, CommentForm, NoCommentsYet },
   data() {
-    return { comments: [], loading: false, error: null };
+    return {
+      comments: [],
+      loading: false,
+      error: null
+    };
   },
   methods: {
     async fetchComments() {
       this.loading = true;
       try {
         const res = await fetch(`https://mate-academy.github.io/fe-students-api/comments?postId=${this.postId}`);
+        if (!res.ok) throw new Error('Failed to load comments');
         this.comments = await res.json();
       } catch {
         this.error = 'Failed to load comments';
@@ -38,9 +43,24 @@ export default {
         this.loading = false;
       }
     },
-    deleteComment(id) { this.comments = this.comments.filter(c => c.id !== id); },
-    addComment(comment) { this.comments.push(comment); }
+    async deleteComment(comment) {
+      const original = [...this.comments];
+      this.comments = this.comments.filter(c => c.id !== comment.id);
+
+      try {
+        const res = await fetch(`https://mate-academy.github.io/fe-students-api/comments/${comment.id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Delete failed');
+      } catch (err) {
+        this.comments = original;
+        this.error = 'Failed to delete comment. Please retry.';
+      }
+    },
+    addComment(comment) {
+      this.comments.push(comment);
+    }
   },
-  mounted() { this.fetchComments(); }
+  mounted() {
+    this.fetchComments();
+  }
 };
 </script>

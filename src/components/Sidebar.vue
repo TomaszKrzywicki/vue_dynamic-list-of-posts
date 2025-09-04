@@ -1,42 +1,42 @@
 <template>
-  <div class="Sidebar Sidebar--open">
-    <PostForm v-if="isCreating" @created="$emit('created', $event)" @cancel="closeSidebar" />
-    <PostPreview v-else-if="selectedPost" 
-      :post="selectedPost" 
-      @edit="editPost" 
-      @delete="deletePost"
+  <div :class="['Sidebar', { 'Sidebar--open': isCreating || selectedPost }]">
+    <PostForm
+      v-if="isEditing"
+      :post="selectedPost"
+      @updated="onUpdated"
+      @cancel="isEditing=false"
     />
-    <CommentsList v-if="selectedPost" :postId="selectedPost.id" />
-    <button class="button mt-3" v-if="selectedPost" @click="$emit('close')">Close Sidebar</button>
+    <PostPreview
+      v-else-if="selectedPost"
+      :post="selectedPost"
+      @edit="isEditing=true"
+      @delete="handleDelete"
+    />
   </div>
 </template>
 
 <script>
 import PostForm from './PostForm.vue';
 import PostPreview from './PostPreview.vue';
-import CommentsList from './CommentsList.vue';
 
 export default {
+  components: { PostForm, PostPreview },
   props: {
     selectedPost: Object,
     isCreating: Boolean
   },
-  components: { PostForm, PostPreview, CommentsList },
+  data() {
+    return { isEditing: false };
+  },
   methods: {
-    closeSidebar() {
-      this.$emit('close');
-    },
-    editPost(post) {
-      this.$emit('updated', post);
-    },
-    deletePost(postId) {
+    handleDelete(postId) {
       this.$emit('deleted', postId);
+      this.isEditing = false;
+    },
+    onUpdated(post) {
+      this.$emit('updated', post);
+      this.isEditing = false;
     }
   }
 };
 </script>
-
-<style scoped>
-.Sidebar { width: 400px; background: #f5f5f5; padding: 1rem; position: fixed; right: 0; top: 0; bottom: 0; overflow-y: auto; }
-.Sidebar--open { display: block; }
-</style>
